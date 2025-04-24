@@ -105,31 +105,24 @@ def callback():
                     upper_limit_km = start_km + max_km
                     remaining = max_km - run_km
                     msg = (
-                    f"{text} を選択しました。
-"
-                    f"開始メーター: {start_km}km
-"
-                    f"保険の上限距離: {max_km}km
-"
-                    f"保険対象終了メーター: {upper_limit_km}km
-"
-                    f"現在の距離: {last_km}km
-"
-                    f"上限まで残り: {remaining}km"
-                )
-                if remaining <= 0:
-                    msg += "
+                        f"{text} を選択しました。\n"
+                        f"開始メーター: {start_km}km\n"
+                        f"保険の上限距離: {max_km}km\n"
+                        f"保険対象終了メーター: {upper_limit_km}km\n"
+                        f"現在の距離: {last_km}km\n"
+                        f"上限まで残り: {remaining}km"
+                    )
+                    if remaining <= 0:
+                        msg += """
 🚨 上限距離を超過しました！ソニー損保（0120-101-789）に連絡してください。
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"
-                elif remaining <= 200:
-                    msg += "
+手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
+                    elif remaining <= 200:
+                        msg += """
 🚨 保険の上限距離まであとわずか（200km以下）です！
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"
-                elif remaining <= 500:
-                    msg += "
-⚠️ 保険の上限距離まで500km以下です。ご注意ください。"
-                    if remaining < 300:
-                        msg += "\n⚠️ 保険の上限に近づいています！"
+手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
+                    elif remaining <= 500:
+                        msg += """
+⚠️ 保険の上限距離まで500km以下です。ご注意ください。"""
                     send_reply(reply_token, msg)
                 else:
                     send_reply(reply_token, f"{text} を選択しました。走行距離管理を開始できます。現在の走行距離をそのまま送信してください。")
@@ -177,19 +170,18 @@ def callback():
                         run_km = current_km - car_data["start_km"]
                         remaining = car_data["max_km"] - run_km
                         car_data["last_km"] = current_km
-                        msg = f"{car} - 現在の走行距離: {run_km}km
-残り: {remaining}km"
+                        msg = f"{car} - 現在の走行距離: {run_km}km\n残り: {remaining}km"
                         if remaining <= 0:
-                            msg += "
+                            msg += """
 🚨 上限距離を超過しました！ソニー損保（0120-101-789）に連絡してください。
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"
+手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
                         elif remaining <= 200:
-                            msg += "
+                            msg += """
 🚨 保険の上限距離まであとわずか（200km以下）です！
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"
+手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
                         elif remaining <= 500:
-                            msg += "
-⚠️ 保険の上限距離まで500km以下です。ご注意ください。"
+                            msg += """
+⚠️ 保険の上限距離まで500km以下です。ご注意ください。"""
                         send_reply(reply_token, msg)
                     user["state"] = None
 
