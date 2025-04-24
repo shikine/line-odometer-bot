@@ -99,30 +99,15 @@ def callback():
                     upper_limit_km = start_km + max_km
                     remaining = max_km - run_km
                     msg = (
-    f"{text} を選択しました。
-"
-    f"開始メーター: {start_km}km
-"
-    f"保険の上限距離: {max_km}km
-"
-    f"保険対象終了メーター: {upper_limit_km}km
-"
-    f"現在の距離: {last_km}km
-"
-    f"上限まで残り: {remaining}km"
-)
-if remaining < 0:
-    msg += "
-🚨 保険の上限距離を超えています。"
-elif remaining < 300:
-    msg += "
-⚠️ 保険の上限に近づいています。"
-                    if remaining < 0:
-                        msg += "
-🚨 保険の上限距離を超えています。"
-                    elif remaining < 300:
-                        msg += "
-⚠️ 保険の上限に近づいています。"
+                        f"{text} を選択しました。\n"
+                        f"開始メーター: {start_km}km\n"
+                        f"保険の上限距離: {max_km}km\n"
+                        f"保険対象終了メーター: {upper_limit_km}km\n"
+                        f"現在の距離: {last_km}km\n"
+                        f"上限まで残り: {remaining}km"
+                    )
+                    if remaining < 300:
+                        msg += "\n⚠️ 保険の上限に近づいています！"
                     send_reply(reply_token, msg)
                 else:
                     send_reply(reply_token, f"{text} を選択しました。走行距離管理を開始できます。")
@@ -197,9 +182,15 @@ elif remaining < 300:
                     send_reply(reply_token, msg)
 
             elif text == "リセット":
-                selected_car = user["selected_car"]
-                user["cars"][selected_car] = {"max_km": 0, "start_km": 0, "last_km": 0}
-                send_reply(reply_token, f"{selected_car} のデータをリセットしました。再設定をお願いします。")
+                user_data[user_id] = {
+                    "selected_car": "ジムニー",
+                    "cars": {
+                        "ジムニー": {"max_km": 0, "start_km": 0, "last_km": 0},
+                        "ラパン": {"max_km": 0, "start_km": 0, "last_km": 0}
+                    },
+                    "state": None
+                }
+                send_reply(reply_token, "すべての車のデータをリセットしました。『ジムニー』または『ラパン』で選択を再開してください。")
 
             else:
                 send_reply(reply_token, "メーター数値を送るか、『ジムニー』『ラパン』『距離上限設定』『現在の走行距離』『保険の上限距離を更新』などを送信してください。")
