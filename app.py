@@ -115,9 +115,6 @@ def callback():
                     if remaining < 300:
                         msg += "\n⚠️ 保険の上限に近づいています！"
                     send_reply(reply_token, msg)
-
-                    with open(DATA_FILE, "wb") as f:
-                        pickle.dump(user_data, f)
                 else:
                     send_reply(reply_token, f"{text} を選択しました。走行距離管理を開始できます。現在の走行距離をそのまま送信してください。")
                 user["state"] = "awaiting_current_km"
@@ -137,42 +134,27 @@ def callback():
             elif text.isdigit():
                 current_km = int(text)
                 car = selected_car
+                car_data = user["cars"][car]
 
                 if user.get("state") == "awaiting_start_km_for_limit":
-                    user["cars"][car]["start_km"] = current_km
+                    car_data["start_km"] = current_km
                     send_reply(reply_token, f"{car} の開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
-
-                    with open(DATA_FILE, "wb") as f:
-                        pickle.dump(user_data, f)
                     user["state"] = "awaiting_max_km"
-                    continue
 
-                if user.get("state") == "awaiting_max_km":
-                    user["cars"][car]["max_km"] = current_km
-                    user["state"] = None
+                elif user.get("state") == "awaiting_max_km":
+                    car_data["max_km"] = current_km
                     send_reply(reply_token, f"{car} の保険上限距離を {current_km}km に設定しました。")
-
-                    with open(DATA_FILE, "wb") as f:
-                        pickle.dump(user_data, f)
-                    continue
-
-                if user.get("state") == "updating_max_km":
-                    user["cars"][car]["max_km"] = current_km
                     user["state"] = None
+
+                elif user.get("state") == "updating_max_km":
+                    car_data["max_km"] = current_km
                     send_reply(reply_token, f"{car} の保険上限距離を {current_km}km に更新しました。")
+                    user["state"] = None
 
-                    with open(DATA_FILE, "wb") as f:
-                        pickle.dump(user_data, f)
-                    continue
-
-                if user.get("state") == "awaiting_current_km":
-                    car_data = user["cars"][car]
+                elif user.get("state") == "awaiting_current_km" or True:
                     if car_data["start_km"] == 0:
                         car_data["start_km"] = current_km
                         send_reply(reply_token, f"{car} の開始メーターを {current_km}km に設定しました。")
-
-                    with open(DATA_FILE, "wb") as f:
-                        pickle.dump(user_data, f)
                         if car_data["max_km"] == 0:
                             send_reply(reply_token, f"{car} の保険上限距離が未設定です。『距離上限設定』と入力して設定してください。")
                     else:
@@ -184,23 +166,9 @@ def callback():
                             msg += "\n⚠️ 保険の上限に近づいています！"
                         send_reply(reply_token, msg)
                     user["state"] = None
-                    continue
 
-                car_data = user["cars"][car]
-                if car_data["start_km"] == 0:
-                    car_data["start_km"] = current_km
-                    car_data["last_km"] = current_km
-                    send_reply(reply_token, f"{car} の開始メーターを {current_km}km に設定しました。")
-                    if car_data["max_km"] == 0:
-                        send_reply(reply_token, f"{car} の保険上限距離が未設定です。『距離上限設定』と入力して設定してください。")
-                else:
-                    run_km = current_km - car_data["start_km"]
-                    remaining = car_data["max_km"] - run_km
-                    car_data["last_km"] = current_km
-                    msg = f"{car} - 現在の走行距離: {run_km}km\n残り: {remaining}km"
-                    if remaining < 300:
-                        msg += "\n⚠️ 保険の上限に近づいています！"
-                    send_reply(reply_token, msg)
+                with open(DATA_FILE, "wb") as f:
+                    pickle.dump(user_data, f)
 
             elif text == "リセット":
                 selected_car = user["selected_car"]
@@ -208,8 +176,8 @@ def callback():
                 user["state"] = None
                 send_reply(reply_token, f"{selected_car} のデータをリセットしました。")
 
-            with open(DATA_FILE, "wb") as f:
-                pickle.dump(user_data, f)
+                with open(DATA_FILE, "wb") as f:
+                    pickle.dump(user_data, f)
 
             else:
                 send_reply(reply_token, "メーター数値を送るか、『ジムニー』『ラパン』『距離上限設定』『現在の走行距離』『保険の上限距離を更新』などを送信してください。")
