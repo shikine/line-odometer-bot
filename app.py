@@ -3,6 +3,7 @@ import os
 import json
 import requests
 from dotenv import load_dotenv
+from supabase import create_client, Client
 
 load_dotenv()
 
@@ -10,15 +11,37 @@ app = Flask(__name__)
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_REPLY_ENDPOINT = 'https://api.line.me/v2/bot/message/reply'
 
-import pickle
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-DATA_FILE = "user_data.pkl"
+def get_user_data(user_id):
+    res = supabase.table("car_data").select("*").eq("user_id", user_id).execute()
+    if res.data:
+        cars = {c["car"]: {
+            "start_km": c["start_km"],
+            "max_km": c["max_km"],
+            "last_km": c["last_km"]
+        } for c in res.data}
+    else:
+        cars = {
+            "ジムニー": {"max_km": 0, "start_km": 0, "last_km": 0},
+            "ラパン": {"max_km": 0, "start_km": 0, "last_km": 0}
+        }
+    return {
+        "selected_car": "ジムニー",
+        "cars": cars,
+        "state": None
+    }
 
-if os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "rb") as f:
-        user_data = pickle.load(f)
-else:
-    user_data = {}
+def save_user_car(user_id, car, car_data):
+    supabase.table("car_data").upsert({
+        "user_id": user_id,
+        "car": car,
+        "start_km": car_data["start_km"],
+        "max_km": car_data["max_km"],
+        "last_km": car_data["last_km"]
+    }).execute()
 
 def send_reply(reply_token, text, buttons=None):
     headers = {
@@ -61,146 +84,73 @@ def callback():
         if msg['type'] == 'text':
             text = msg['text'].strip()
 
+            if 'user_data' not in locals():
+                user_data = {}
             if user_id not in user_data:
-                user_data[user_id] = {
-                    "selected_car": "ジムニー",
-                    "cars": {
-                        "ジムニー": {"max_km": 0, "start_km": 0, "last_km": 0},
-                        "ラパン": {"max_km": 0, "start_km": 0, "last_km": 0}
-                    },
-                    "state": None
-                }
+                user_data[user_id] = get_user_data(user_id)
 
             user = user_data[user_id]
             selected_car = user["selected_car"]
+            car_data = user["cars"][selected_car]
 
             if text.lower() in ["スタート", "メニュー"]:
                 buttons = [
-                    {
-                        "type": "postback",
-                        "label": "ジムニーの管理",
-                        "data": "action=select_car&car=ジムニー"
-                    },
-                    {
-                        "type": "postback",
-                        "label": "ラパンの管理",
-                        "data": "action=select_car&car=ラパン"
-                    },
-                    {
-                        "type": "message",
-                        "label": "リセット",
-                        "text": "リセット"
-                    }
+                    {"type": "postback", "label": "ジムニーの管理", "data": "action=select_car&car=ジムニー"},
+                    {"type": "postback", "label": "ラパンの管理", "data": "action=select_car&car=ラパン"},
+                    {"type": "message", "label": "リセット", "text": "リセット"}
                 ]
                 send_reply(reply_token, "以下のオプションから選択してください。", buttons)
 
             elif text in ["ジムニー", "ラパン"]:
                 user["selected_car"] = text
                 car_data = user["cars"][text]
-                start_km = car_data.get("start_km", 0)
-                max_km = car_data.get("max_km", 0)
-                last_km = car_data.get("last_km", 0)
-
-                if start_km == 0:
+                if car_data["start_km"] == 0:
                     send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください。")
                     user["state"] = "awaiting_start_km_for_limit"
-                elif max_km == 0:
+                elif car_data["max_km"] == 0:
                     send_reply(reply_token, f"{text} の保険上限距離が未設定です。保険の上限距離を入力してください。")
                     user["state"] = "awaiting_max_km"
                 else:
-                    run_km = last_km - start_km
-                    upper_limit_km = start_km + max_km
-                    remaining = max_km - run_km
+                    run_km = car_data["last_km"] - car_data["start_km"]
+                    upper_limit_km = car_data["start_km"] + car_data["max_km"]
+                    remaining = car_data["max_km"] - run_km
                     msg = (
                         f"{text} を選択しました。\n"
-                        f"開始メーター: {start_km}km\n"
-                        f"保険の上限距離: {max_km}km\n"
+                        f"開始メーター: {car_data['start_km']}km\n"
+                        f"保険の上限距離: {car_data['max_km']}km\n"
                         f"保険対象終了メーター: {upper_limit_km}km\n"
-                        f"現在の距離: {last_km}km\n"
+                        f"現在の距離: {car_data['last_km']}km\n"
                         f"上限まで残り: {remaining}km"
                     )
-                    if remaining <= 0:
-                        msg += """
-🚨 上限距離を超過しました！ソニー損保（0120-101-789）に連絡してください。
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
-                    elif remaining <= 200:
-                        msg += """
-🚨 保険の上限距離まであとわずか（200km以下）です！
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
-                    elif remaining <= 500:
-                        msg += """
-⚠️ 保険の上限距離まで500km以下です。ご注意ください。"""
                     send_reply(reply_token, msg)
-                    user["state"] = "awaiting_current_km"
-
-            elif text == "距離上限設定":
-                send_reply(reply_token, "開始メーターの走行距離を教えてください。")
-                user["state"] = "awaiting_start_km_for_limit"
-
-            elif text == "保険の上限距離を更新":
-                send_reply(reply_token, "新しい保険の上限距離を教えてください。")
-                user["state"] = "updating_max_km"
-
-            elif text == "現在の走行距離":
-                send_reply(reply_token, "現在の走行距離を教えてください。")
-                user["state"] = "awaiting_current_km"
 
             elif text.isdigit():
                 current_km = int(text)
-                car = selected_car
-                car_data = user["cars"][car]
-
-                if user.get("state") == "awaiting_start_km_for_limit":
+                state = user["state"]
+                if state == "awaiting_start_km_for_limit":
                     car_data["start_km"] = current_km
-                    send_reply(reply_token, f"{car} の開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
                     user["state"] = "awaiting_max_km"
+                    send_reply(reply_token, f"{selected_car} の開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
 
-                elif user.get("state") == "awaiting_max_km":
+                elif state == "awaiting_max_km" or state == "updating_max_km":
                     car_data["max_km"] = current_km
-                    send_reply(reply_token, f"{car} の保険上限距離を {current_km}km に設定しました。")
                     user["state"] = None
+                    send_reply(reply_token, f"{selected_car} の保険上限距離を {current_km}km に設定しました。")
 
-                elif user.get("state") == "updating_max_km":
-                    car_data["max_km"] = current_km
-                    send_reply(reply_token, f"{car} の保険上限距離を {current_km}km に更新しました。")
-                    user["state"] = None
+                else:
+                    car_data["last_km"] = current_km
+                    run_km = current_km - car_data["start_km"]
+                    remaining = car_data["max_km"] - run_km
+                    msg = f"{selected_car} - 現在の走行距離: {run_km}km\n残り: {remaining}km"
+                    send_reply(reply_token, msg)
 
-                elif user.get("state") == "awaiting_current_km" or True:
-                    if car_data["start_km"] == 0:
-                        car_data["start_km"] = current_km
-                        send_reply(reply_token, f"{car} の開始メーターを {current_km}km に設定しました。")
-                        if car_data["max_km"] == 0:
-                            send_reply(reply_token, f"{car} の保険上限距離が未設定です。『距離上限設定』と入力して設定してください。")
-                    else:
-                        run_km = current_km - car_data["start_km"]
-                        remaining = car_data["max_km"] - run_km
-                        car_data["last_km"] = current_km
-                        msg = f"{car} - 現在の走行距離: {run_km}km\n残り: {remaining}km"
-                        if remaining <= 0:
-                            msg += """
-🚨 上限距離を超過しました！ソニー損保（0120-101-789）に連絡してください。
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
-                        elif remaining <= 200:
-                            msg += """
-🚨 保険の上限距離まであとわずか（200km以下）です！
-手続きページ: https://www.sonysonpo.co.jp/share/doc/change/cchg005.html"""
-                        elif remaining <= 500:
-                            msg += """
-⚠️ 保険の上限距離まで500km以下です。ご注意ください。"""
-                        send_reply(reply_token, msg)
-                    user["state"] = None
-
-                with open(DATA_FILE, "wb") as f:
-                    pickle.dump(user_data, f)
+                save_user_car(user_id, selected_car, car_data)
 
             elif text == "リセット":
-                selected_car = user["selected_car"]
                 user["cars"][selected_car] = {"max_km": 0, "start_km": 0, "last_km": 0}
                 user["state"] = None
+                save_user_car(user_id, selected_car, user["cars"][selected_car])
                 send_reply(reply_token, f"{selected_car} のデータをリセットしました。")
-
-                with open(DATA_FILE, "wb") as f:
-                    pickle.dump(user_data, f)
 
             else:
                 send_reply(reply_token, "メーター数値を送るか、『ジムニー』『ラパン』『距離上限設定』『現在の走行距離』『保険の上限距離を更新』などを送信してください。")
