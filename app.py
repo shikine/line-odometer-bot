@@ -100,7 +100,14 @@ def callback():
                 start_km = car_data.get("start_km", 0)
                 max_km = car_data.get("max_km", 0)
                 last_km = car_data.get("last_km", 0)
-                if start_km and max_km:
+
+                if start_km == 0:
+                    send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください。")
+                    user["state"] = "awaiting_start_km_for_limit"
+                elif max_km == 0:
+                    send_reply(reply_token, f"{text} の保険上限距離が未設定です。保険の上限距離を入力してください。")
+                    user["state"] = "awaiting_max_km"
+                else:
                     run_km = last_km - start_km
                     upper_limit_km = start_km + max_km
                     remaining = max_km - run_km
@@ -124,9 +131,7 @@ def callback():
                         msg += """
 ⚠️ 保険の上限距離まで500km以下です。ご注意ください。"""
                     send_reply(reply_token, msg)
-                else:
-                    send_reply(reply_token, f"{text} を選択しました。走行距離管理を開始できます。現在の走行距離をそのまま送信してください。")
-                user["state"] = "awaiting_current_km"
+                    user["state"] = "awaiting_current_km"
 
             elif text == "距離上限設定":
                 send_reply(reply_token, "開始メーターの走行距離を教えてください。")
