@@ -104,14 +104,11 @@ def callback():
             elif text in ["ジムニー", "ラパン"]:
                 user["selected_car"] = text
                 car_data = user["cars"][text]
-                if car_data["start_km"] == 0 and car_data["max_km"] == 0:
-                    send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離と保険の上限距離が未設定です。まず開始メーターの走行距離を入力してください。")
-                    user["state"] = "awaiting_start_km_for_limit"
-                elif car_data["start_km"] == 0:
-                    send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください。")
-                    user["state"] = "awaiting_start_km_for_limit"
+                if car_data["start_km"] == 0:
+                    send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください（例：30000）。")
+                    user["state"] = "awaiting_start_km_for_both"
                 elif car_data["max_km"] == 0:
-                    send_reply(reply_token, f"{text} の保険上限距離が未設定です。保険の上限距離を入力してください。")
+                    send_reply(reply_token, f"{text} の保険上限距離が未設定です。保険の上限距離を入力してください（例：5000）。")
                     user["state"] = "awaiting_max_km"
                 else:
                     run_km = car_data["last_km"] - car_data["start_km"]
@@ -130,16 +127,15 @@ def callback():
             elif text.isdigit():
                 current_km = int(text)
                 state = user["state"]
-                if state == "awaiting_start_km_for_limit":
+                if state == "awaiting_start_km_for_both":
                     car_data["start_km"] = current_km
-                    user["state"] = "awaiting_max_km"
-                    send_reply(reply_token, f"{selected_car} の開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
-
-                elif state == "awaiting_max_km" or state == "updating_max_km":
+                    car_data["last_km"] = current_km
+                    user["state"] = "awaiting_max_km_after_start"
+                    send_reply(reply_token, f"開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
+                elif state == "awaiting_max_km" or state == "awaiting_max_km_after_start" or state == "updating_max_km":
                     car_data["max_km"] = current_km
                     user["state"] = None
                     send_reply(reply_token, f"{selected_car} の保険上限距離を {current_km}km に設定しました。")
-
                 else:
                     car_data["last_km"] = current_km
                     run_km = current_km - car_data["start_km"]
