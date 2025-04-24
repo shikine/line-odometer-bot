@@ -182,15 +182,10 @@ def callback():
                     send_reply(reply_token, msg)
 
             elif text == "リセット":
-                user_data[user_id] = {
-                    "selected_car": "ジムニー",
-                    "cars": {
-                        "ジムニー": {"max_km": 0, "start_km": 0, "last_km": 0},
-                        "ラパン": {"max_km": 0, "start_km": 0, "last_km": 0}
-                    },
-                    "state": None
-                }
-                send_reply(reply_token, "すべての車のデータをリセットしました。『ジムニー』または『ラパン』で選択を再開してください。")
+                selected_car = user["selected_car"]
+                user["cars"][selected_car] = {"max_km": 0, "start_km": 0, "last_km": 0}
+                user["state"] = None
+                send_reply(reply_token, f"{selected_car} のデータをリセットしました。")
 
             else:
                 send_reply(reply_token, "メーター数値を送るか、『ジムニー』『ラパン』『距離上限設定』『現在の走行距離』『保険の上限距離を更新』などを送信してください。")
