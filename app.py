@@ -132,10 +132,20 @@ def callback():
                     car_data["last_km"] = current_km
                     user["state"] = "awaiting_max_km_after_start"
                     send_reply(reply_token, f"開始メーターを {current_km}km に設定しました。次に保険の上限距離を教えてください。")
-                elif state == "awaiting_max_km" or state == "awaiting_max_km_after_start" or state == "updating_max_km":
+                elif state in ["awaiting_max_km", "awaiting_max_km_after_start", "updating_max_km"]:
                     car_data["max_km"] = current_km
                     user["state"] = None
-                    send_reply(reply_token, f"{selected_car} の保険上限距離を {current_km}km に設定しました。")
+                    run_km = car_data["last_km"] - car_data["start_km"]
+                    upper_limit_km = car_data["start_km"] + car_data["max_km"]
+                    remaining = car_data["max_km"] - run_km
+                    msg = (
+                        f"{selected_car} の保険上限距離を {current_km}km に設定しました。\n"
+                        f"開始メーター: {car_data['start_km']}km\n"
+                        f"保険対象終了メーター: {upper_limit_km}km\n"
+                        f"現在の距離: {car_data['last_km']}km\n"
+                        f"上限まで残り: {remaining}km"
+                    )
+                    send_reply(reply_token, msg)
                 else:
                     car_data["last_km"] = current_km
                     run_km = current_km - car_data["start_km"]
