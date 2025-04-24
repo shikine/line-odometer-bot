@@ -99,17 +99,18 @@ def callback():
                     upper_limit_km = start_km + max_km
                     remaining = max_km - run_km
                     msg = (
-                        f"{text} を選択しました。
+    f"{text} を選択しました。
 "
-                        f"開始メーター: {start_km}km
+    f"開始メーター: {start_km}km
 "
-                        f"保険の上限距離: {max_km}km
+    f"保険の上限距離: {max_km}km
 "
-                        f"保険対象終了メーター: {upper_limit_km}km
+    f"保険対象終了メーター: {upper_limit_km}km
 "
-                        f"現在の距離: {last_km}km
+    f"現在の距離: {last_km}km
 "
-                        f"上限まで残り: {remaining}km"
+    f"上限まで残り: {remaining}km"
+)
                     )
                     if remaining < 300:
                         msg += "
