@@ -99,15 +99,24 @@ def callback():
                     upper_limit_km = start_km + max_km
                     remaining = max_km - run_km
                     msg = (
-                        f"{text} を選択しました。\n"
-                        f"開始メーター: {start_km}km\n"
-                        f"保険の上限距離: {max_km}km\n"
-                        f"保険対象終了メーター: {upper_limit_km}km\n"
-                        f"現在の距離: {last_km}km\n"
+                        f"{text} を選択しました。
+"
+                        f"開始メーター: {start_km}km
+"
+                        f"保険の上限距離: {max_km}km
+"
+                        f"保険対象終了メーター: {upper_limit_km}km
+"
+                        f"現在の距離: {last_km}km
+"
                         f"上限まで残り: {remaining}km"
                     )
-                    if remaining < 300:
-                        msg += "\n⚠️ 保険の上限に近づいています！"
+                    if remaining < 0:
+                        msg += "
+🚨 保険の上限距離を超えています。"
+                    elif remaining < 300:
+                        msg += "
+⚠️ 保険の上限に近づいています。"
                     send_reply(reply_token, msg)
                 else:
                     send_reply(reply_token, f"{text} を選択しました。走行距離管理を開始できます。")
@@ -199,4 +208,5 @@ def callback():
 
 
 if __name__ == "__main__":
-    app.run(port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
