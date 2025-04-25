@@ -104,14 +104,12 @@ def callback():
             elif text in ["ジムニー", "ラパン"]:
                 user["selected_car"] = text
                 car_data = user["cars"][text]
-                if car_data["start_km"] == 0 and car_data["max_km"] == 0:
-                    send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください（例：30000）。")
-                    user["state"] = "awaiting_start_km_for_both"
-                elif car_data["start_km"] == 0:
+
+                if car_data["start_km"] == 0:
                     send_reply(reply_token, f"{text} を選択しました。開始メーターの走行距離を入力してください（例：30000）。")
                     user["state"] = "awaiting_start_km_for_both"
                 elif car_data["max_km"] == 0:
-                    send_reply(reply_token, f"{text} の保険上限距離が未設定です。保険の上限距離を入力してください（例：5000）。")
+                    send_reply(reply_token, f"{text} を選択しました。保険の上限距離を入力してください（例：5000）。")
                     user["state"] = "awaiting_max_km"
                 else:
                     run_km = car_data["last_km"] - car_data["start_km"]
